@@ -26,6 +26,7 @@
 #include "driver/uart_register.h"
 #include "mem.h"
 #include "os_type.h"
+#include "misc.h"
 
 // UartDev is defined and initialized in rom code.
 extern UartDevice    UartDev;
@@ -36,16 +37,25 @@ LOCAL struct UartBuffer* pRxBuffer = NULL;
 /*uart demo with a system task, to output what uart receives*/
 /*this is a example to process uart data from task,please change the priority to fit your application task if exists*/
 /*it might conflict with your task, if so,please arrange the priority of different task,  or combine it to a different event in the same task. */
-#define uart_recvTaskPrio        0
 #define uart_recvTaskQueueLen    10
 os_event_t    uart_recvTaskQueue[uart_recvTaskQueueLen];
 
+#define USE_DBG
+#ifdef USE_DBG
 #define DBG  
-#define DBG1 uart1_sendStr_no_wait
-#define DBG2 os_printf
+#define DBG1 DBG_PRINTF
+#else   //USE_DBG
+#define DBG  
+#define DBG1(...)
+#endif  //USE_DBG
 
 
 LOCAL void uart0_rx_intr_handler(void *para);
+
+#if UART_BUFF_EN
+LOCAL void  Uart_Buf_Cpy(struct UartBuffer* pCur, char* pdata , uint16 data_len);
+LOCAL void  tx_fifo_insert(struct UartBuffer* pTxBuff, uint8 data_len,  uint8 uart_no);
+#endif  //UART_BUFF_EN
 
 /******************************************************************************
  * FunctionName : uart_config
@@ -114,7 +124,7 @@ uart_config(uint8 uart_no)
  * Parameters   : uint8 TxChar - character to tx
  * Returns      : OK
 *******************************************************************************/
- STATUS uart_tx_one_char(uint8 uart, uint8 TxChar)
+ STATUS uart_tx_one_char(int8 uart, uint8 TxChar)
 {
     while (true){
         uint32 fifo_cnt = READ_PERI_REG(UART_STATUS(uart)) & (UART_TXFIFO_CNT<<UART_TXFIFO_CNT_S);
@@ -146,7 +156,7 @@ uart1_write_char(char c)
     }
 }
 
-//os_printf output to fifo or to the tx buffer
+//DBG_PRINTF output to fifo or to the tx buffer
 LOCAL void ICACHE_FLASH_ATTR
 uart0_write_char_no_wait(char c)
 {
@@ -154,13 +164,13 @@ uart0_write_char_no_wait(char c)
     uint8 chr;
     if (c == '\n'){
         chr = '\r';
-        tx_buff_enq(&chr, 1);
+        tx_buff_enq((char*)&chr, 1);
         chr = '\n';
-        tx_buff_enq(&chr, 1);
+        tx_buff_enq((char*)&chr, 1);
     }else if (c == '\r'){
     
     }else{
-        tx_buff_enq(&c,1);
+        tx_buff_enq((char*)&c,1);
     }
 #else //send to uart tx buffer
     if (c == '\n'){
@@ -235,15 +245,17 @@ uart0_rx_intr_handler(void *para)
         DBG1("FRM_ERR\r\n");
         WRITE_PERI_REG(UART_INT_CLR(uart_no), UART_FRM_ERR_INT_CLR);
     }else if(UART_RXFIFO_FULL_INT_ST == (READ_PERI_REG(UART_INT_ST(uart_no)) & UART_RXFIFO_FULL_INT_ST)){
+        //RXFIFO_FULLなので、受信バッファいっぱい？
         DBG("f");
         uart_rx_intr_disable(UART0);
         WRITE_PERI_REG(UART_INT_CLR(UART0), UART_RXFIFO_FULL_INT_CLR);
-        system_os_post(uart_recvTaskPrio, 0, 0);
+        system_os_post(TASK_PRIOR_UART, 0, 0);
     }else if(UART_RXFIFO_TOUT_INT_ST == (READ_PERI_REG(UART_INT_ST(uart_no)) & UART_RXFIFO_TOUT_INT_ST)){
+        //TimeOUT、の意味らしい
         DBG("t");
         uart_rx_intr_disable(UART0);
         WRITE_PERI_REG(UART_INT_CLR(UART0), UART_RXFIFO_TOUT_INT_CLR);
-        system_os_post(uart_recvTaskPrio, 0, 0);
+        system_os_post(TASK_PRIOR_UART, 0, 0);
     }else if(UART_TXFIFO_EMPTY_INT_ST == (READ_PERI_REG(UART_INT_ST(uart_no)) & UART_TXFIFO_EMPTY_INT_ST)){
         DBG("e");
 	/* to output uart data from uart buffer directly in empty interrupt handler*/
@@ -255,7 +267,7 @@ uart0_rx_intr_handler(void *para)
 	#if UART_BUFF_EN
 		tx_start_uart_buffer(UART0);
 	#endif
-        //system_os_post(uart_recvTaskPrio, 1, 0);
+        //system_os_post(TASK_PRIOR_UART, 1, 0);
         WRITE_PERI_REG(UART_INT_CLR(uart_no), UART_TXFIFO_EMPTY_INT_CLR);
         
     }else if(UART_RXFIFO_OVF_INT_ST  == (READ_PERI_REG(UART_INT_ST(uart_no)) & UART_RXFIFO_OVF_INT_ST)){
@@ -280,7 +292,7 @@ uart_test_rx()
     uint8 uart_buf[128]={0};
     uint16 len = 0;
     len = rx_buff_deq(uart_buf, 128 );
-    tx_buff_enq(uart_buf,len);
+    tx_buff_enq((char*)uart_buf,len);
 }
 #endif
 
@@ -315,7 +327,7 @@ void ICACHE_FLASH_ATTR
 uart_init(UartBautRate uart0_br, UartBautRate uart1_br)
 {
     /*this is a example to process uart data from task,please change the priority to fit your application task if exists*/
-    system_os_task(uart_recvTask, uart_recvTaskPrio, uart_recvTaskQueue, uart_recvTaskQueueLen);  //demo with a task to process the uart data
+    system_os_task(uart_recvTask, TASK_PRIOR_UART, uart_recvTaskQueue, uart_recvTaskQueueLen);  //demo with a task to process the uart data
     
     UartDev.baut_rate = uart0_br;
     uart_config(UART0);
@@ -333,12 +345,12 @@ uart_init(UartBautRate uart0_br, UartBautRate uart1_br)
     //do nothing...
 
     /*option 2: output from uart1,uart1 output will not wait , just for output debug info */
-    /*os_printf output uart data via uart1(GPIO2)*/
+    /*DBG_PRINTF output uart data via uart1(GPIO2)*/
     //os_install_putc1((void *)uart1_write_char);    //use this one to output debug information via uart1 //
 
     /*option 3: output from uart0 will skip current byte if fifo is full now... */
     /*see uart0_write_char_no_wait:you can output via a buffer or output directly */
-    /*os_printf output uart data via uart0 or uart buffer*/
+    /*DBG_PRINTF output uart data via uart0 or uart buffer*/
     //os_install_putc1((void *)uart0_write_char_no_wait);  //use this to print via uart0
     
     #if UART_SELFTEST&UART_BUFF_EN
@@ -486,7 +498,7 @@ rx_buff_deq(char* pdata, uint16 data_len )
             pRxBuffer->pOutPos= (pRxBuffer->pUartBuff +  (pRxBuffer->pOutPos- pRxBuffer->pUartBuff) % pRxBuffer->UartBuffSize );
             pRxBuffer->Space +=( len_tmp-tail_len);                
         }else{
-            //os_printf("case 3 in rx deq\n\r");
+            //DBG_PRINTF("case 3 in rx deq\n\r");
             os_memcpy(pdata, pRxBuffer->pOutPos, len_tmp);
             pRxBuffer->pOutPos += len_tmp;
             pRxBuffer->pOutPos = (pRxBuffer->pUartBuff +  (pRxBuffer->pOutPos- pRxBuffer->pUartBuff) % pRxBuffer->UartBuffSize );
@@ -508,7 +520,7 @@ void Uart_rx_buff_enq()
     #if 1
     fifo_len = (READ_PERI_REG(UART_STATUS(UART0))>>UART_RXFIFO_CNT_S)&UART_RXFIFO_CNT;
     if(fifo_len >= pRxBuffer->Space){
-        os_printf("buf full!!!\n\r");            
+        DBG_PRINTF("buf full!!!\n\r");            
     }else{
         buf_idx=0;
         while(buf_idx < fifo_len){
@@ -521,7 +533,7 @@ void Uart_rx_buff_enq()
         }
         pRxBuffer->Space -= fifo_len ;
         if(pRxBuffer->Space >= UART_FIFO_LEN){
-            //os_printf("after rx enq buf enough\n\r");
+            //DBG_PRINTF("after rx enq buf enough\n\r");
             uart_rx_intr_enable(UART0);
         }
     }

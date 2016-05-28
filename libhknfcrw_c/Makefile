@@ -12,7 +12,7 @@
 #     a generated lib/image xxx.a ()
 #
 ifndef PDIR
-GEN_LIBS = libuser.a
+GEN_LIBS = libhknfcrw.a
 endif
 
 
@@ -38,8 +38,7 @@ endif
 #
 
 INCLUDES := $(INCLUDES) -I $(PDIR)include
-INCLUDES += -I ./
-INCLUDES += -I ../../include/ets -I ../libhknfcrw_c/inc
+INCLUDES += -I ../include/driver -I ./inc
 PDIR := ../$(PDIR)
 sinclude $(PDIR)Makefile
 

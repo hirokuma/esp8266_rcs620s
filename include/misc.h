@@ -3,7 +3,10 @@
 
 #include "esp8266_headers.h"
 
-#define TASK_PRIOR_MAIN         (0)
+//タスク優先度
+//  0:lowest 1:middle 2:high
+#define TASK_PRIOR_MAIN         USER_TASK_PRIO_0
+#define TASK_PRIOR_UART         USER_TASK_PRIO_1
 
 #define REQ_WIFI_CONN_START     (1)
 #define REQ_GET_HOST_BY_NAME    (2)

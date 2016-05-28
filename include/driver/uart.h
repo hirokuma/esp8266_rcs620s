@@ -24,7 +24,7 @@
 #define UART_TX_BUFFER_SIZE 256  //Ring buffer length of tx buffer
 #define UART_RX_BUFFER_SIZE 256 //Ring buffer length of rx buffer
 
-#define UART_BUFF_EN  0   //use uart buffer  , FOR UART0
+#define UART_BUFF_EN  1   //use uart buffer  , FOR UART0
 #define UART_SELFTEST  0  //set 1:enable the loop test demo for uart buffer, FOR UART0
 
 #define UART_HW_RTS   0   //set 1: enable uart hw flow control RTS, PIN MTDO, FOR UART0
@@ -179,17 +179,15 @@ typedef enum {
 } TCPState;
 
 //void ICACHE_FLASH_ATTR uart_test_rx();
-STATUS uart_tx_one_char(uint8 uart, uint8 TxChar);
+STATUS uart_tx_one_char(int8 uart, uint8 TxChar);
 STATUS uart_tx_one_char_no_wait(uint8 uart, uint8 TxChar);
 void  uart1_sendStr_no_wait(const char *str);
 struct UartBuffer*  Uart_Buf_Init();
 
 
 #if UART_BUFF_EN
-LOCAL void  Uart_Buf_Cpy(struct UartBuffer* pCur, char* pdata , uint16 data_len);
 void  uart_buf_free(struct UartBuffer* pBuff);
 void  tx_buff_enq(char* pdata, uint16 data_len );
-LOCAL void  tx_fifo_insert(struct UartBuffer* pTxBuff, uint8 data_len,  uint8 uart_no);
 void  tx_start_uart_buffer(uint8 uart_no);
 uint16  rx_buff_deq(char* pdata, uint16 data_len );
 void  Uart_rx_buff_enq();

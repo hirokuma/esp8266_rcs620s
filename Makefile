@@ -23,7 +23,8 @@ GEN_BINS= eagle.app.v6.bin
 SPECIAL_MKTARGETS=$(APP_MKTARGETS)
 SUBDIRS=    \
 	user \
-	driver
+	driver \
+	libhknfcrw_c
 
 endif # } PDIR
 
@@ -48,7 +49,8 @@ endif
 
 COMPONENTS_eagle.app.v6 = \
 	user/libuser.a \
-	driver/libdriver.a
+	driver/libdriver.a \
+	libhknfcrw_c/libhknfcrw.a
 
 LINKFLAGS_eagle.app.v6 = \
 	-L../lib        \

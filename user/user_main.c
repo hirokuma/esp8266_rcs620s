@@ -244,6 +244,7 @@ static void ICACHE_FLASH_ATTR event_handler(os_event_t *pEvent)
 
     case REQ_MAIN_LOOP:
         system_soft_wdt_feed();
+        os_delay_us(1000);
         main_loop(&mConn);
         break;
 
