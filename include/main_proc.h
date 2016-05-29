@@ -6,7 +6,7 @@
 #include "espconn.h"
 
 void ICACHE_FLASH_ATTR data_sentcb(void *pArg);
-void ICACHE_FLASH_ATTR data_receivedcd(void *pArg, char *pData, unsigned short Len);
+void ICACHE_FLASH_ATTR data_receivedcb(void *pArg, char *pData, unsigned short Len);
 void ICACHE_FLASH_ATTR tcp_disconnectedcb(void *pArg);
 void ICACHE_FLASH_ATTR main_proc(struct espconn *pConn);
 void ICACHE_FLASH_ATTR main_loop(struct espconn *pConn);

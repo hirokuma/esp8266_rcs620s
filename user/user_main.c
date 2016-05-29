@@ -228,7 +228,7 @@ static void ICACHE_FLASH_ATTR event_handler(os_event_t *pEvent)
         espconn_regist_connectcb(&mConn, tcp_connectedcb);
         espconn_regist_disconcb(&mConn, tcp_disconnectedcb);
         espconn_regist_sentcb(&mConn, data_sentcb);
-        espconn_regist_recvcb(&mConn, data_receivedcd);
+        espconn_regist_recvcb(&mConn, data_receivedcb);
         err = espconn_connect(&mConn);
         if (err != ESPCONN_OK) {
             DBG_PRINTF("espconn_connect fail : %d\n", err);

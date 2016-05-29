@@ -19,7 +19,7 @@ void ICACHE_FLASH_ATTR data_sentcb(void *pArg)
 }
 
 
-void ICACHE_FLASH_ATTR data_receivedcd(void *pArg, char *pData, unsigned short Len)
+void ICACHE_FLASH_ATTR data_receivedcb(void *pArg, char *pData, unsigned short Len)
 {
     struct espconn *pConn = (struct espconn *)pArg;
 
