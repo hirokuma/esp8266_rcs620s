@@ -384,7 +384,7 @@ bool NfcPcd_RfConfiguration(uint8_t cmd, const uint8_t* pCommand, uint8_t Comman
  */
 bool NfcPcd_Reset(void)
 {
-	LOGD("%s", __PRETTY_FUNCTION__);
+	LOGD("%s\n", __PRETTY_FUNCTION__);
 
 	mNfcMng.frmbuf[0] = 0xd4;
 	mNfcMng.frmbuf[1] = 0x18;		//Reset

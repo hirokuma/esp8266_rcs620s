@@ -124,9 +124,9 @@ void HkNfcRw_Reset(void)
 /**
  * ターゲットの探索
  *
- * @param[in]	bNfcA	NfcA(null時は探索しない)
- * @param[in]	bNfcB	NfcB(null時は探索しない)
- * @param[in]	bNfcF	NfcF(null時は探索しない)
+ * @param[in]	bNfcA	NfcA(false時は探索しない)
+ * @param[in]	bNfcB	NfcB(false時は探索しない)
+ * @param[in]	bNfcF	NfcF(false時は探索しない)
  *
  * @retval	true		成功
  * @retval	false		失敗

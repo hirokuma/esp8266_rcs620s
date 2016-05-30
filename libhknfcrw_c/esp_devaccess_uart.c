@@ -78,7 +78,9 @@ uint16_t  hk_nfcrw_read(uint8_t* data, uint16_t len)
 
     while (loop--) {
         Uart_rx_buff_enq();
-        len -= rx_buff_deq((char*)data, len);
+        uint16_t sz = rx_buff_deq((char*)data, len);
+        len -= sz;
+        data += sz;
         if (len == 0) {
             break;
         }
