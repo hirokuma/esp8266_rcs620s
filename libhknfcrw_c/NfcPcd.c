@@ -224,19 +224,21 @@ bool NfcPcd_Init(void)
 	uint16_t res_len;
 
 	sendAck();
+	hk_msleep(100);
 
 	ret = NfcPcd_Reset();
 	if(!ret) {
+        LOGE("[init]fail Reset\n");
 		return false;
 	}
 
 	// RF通信のT/O
 	mNfcMng.frmbuf[0] = 0xd4;
 	mNfcMng.frmbuf[1] = 0x32;
-	mNfcMng.frmbuf[2] = 0x02;		// T/O
+	mNfcMng.frmbuf[2] = 0x02;		// various timings
 	mNfcMng.frmbuf[3] = 0x00;		// RFU
-	mNfcMng.frmbuf[4] = 0x00;		// ATR_RES : no timeout
-	mNfcMng.frmbuf[5] = 0x00;		// 非DEP通信時 : no timeout
+	mNfcMng.frmbuf[4] = 0x00;		// ATR_RES(Initiator mode) : no timeout(デフォルトは0x0B)
+	mNfcMng.frmbuf[5] = 0x00;		// 非DEP通信時(InCommunicateThru) : no timeout(デフォルトは0x0A)
 	ret = sendCmd(mNfcMng.frmbuf, 6, mNfcMng.resbuf, &res_len, true);
 	if(!ret || (res_len != RESHEAD_LEN)) {
 		LOGE("d4 32 02\n");
@@ -384,7 +386,7 @@ bool NfcPcd_RfConfiguration(uint8_t cmd, const uint8_t* pCommand, uint8_t Comman
  */
 bool NfcPcd_Reset(void)
 {
-	LOGD("%s\n", __PRETTY_FUNCTION__);
+	//LOGD("%s\n", __PRETTY_FUNCTION__);
 
 	mNfcMng.frmbuf[0] = 0xd4;
 	mNfcMng.frmbuf[1] = 0x18;		//Reset
@@ -1405,7 +1407,7 @@ static uint8_t calcDcs(const uint8_t* data, uint16_t len)
  */
 static void sendAck(void)
 {
-	LOGD("%s\n", __PRETTY_FUNCTION__);
+	//LOGD("%s\n", __PRETTY_FUNCTION__);
 
 	hk_nfcrw_write(ACK, sizeof(ACK));
 

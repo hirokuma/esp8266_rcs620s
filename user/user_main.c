@@ -5,11 +5,13 @@
 #include "main_proc.h"
 #include "misc.h"
 
-#define M_SZ_QUEUE      (5)
+#define M_SZ_QUEUE          (5)
+#define M_SZ_SSL_BUFFER     (1024 * 5)
+#define M_PORT_SSL          (443)
 
 
-static const char M_SSID[] = MY_SSID;
-static const char M_PASSWD[] = MY_PASSWD;
+static const char M_SSID[] = WIFI_SSID;
+static const char M_PASSWD[] = WIFI_PASSWD;
 
 static os_event_t       mQueue[M_SZ_QUEUE];
 static struct espconn   mConn;
@@ -180,6 +182,8 @@ static void ICACHE_FLASH_ATTR event_handler(os_event_t *pEvent)
 {
     err_t err;
 
+    system_soft_wdt_feed();
+
     switch (pEvent->sig) {
     case REQ_WIFI_CONN_START:
         {
@@ -200,7 +204,7 @@ static void ICACHE_FLASH_ATTR event_handler(os_event_t *pEvent)
 
     case REQ_GET_HOST_BY_NAME:
         DBG_PRINTF("REQ_GET_HOST_BY_NAME\n");
-        err = espconn_gethostbyname(&mConn, MY_HOST, &mHostIp, dns_donecb);
+        err = espconn_gethostbyname(&mConn, FIREBASE_URL, &mHostIp, dns_donecb);
         switch (err) {
         case ESPCONN_OK:
             //キャッシュで保持しているので、値がmHostIpに入る
@@ -222,29 +226,31 @@ static void ICACHE_FLASH_ATTR event_handler(os_event_t *pEvent)
         mConn.state = ESPCONN_NONE;
         mConn.proto.tcp = &mTcp;
         mConn.proto.tcp->local_port = espconn_port();
-        mConn.proto.tcp->remote_port = MY_PORT;
+        mConn.proto.tcp->remote_port = M_PORT_SSL;
         os_memcpy(mConn.proto.tcp->remote_ip, &mHostIp.addr, 4);
 
         espconn_regist_connectcb(&mConn, tcp_connectedcb);
         espconn_regist_disconcb(&mConn, tcp_disconnectedcb);
         espconn_regist_sentcb(&mConn, data_sentcb);
         espconn_regist_recvcb(&mConn, data_receivedcb);
-        err = espconn_connect(&mConn);
+        espconn_secure_set_size(ESPCONN_CLIENT, M_SZ_SSL_BUFFER);   //SSL
+        err = espconn_secure_connect(&mConn);                       //SSL
         if (err != ESPCONN_OK) {
-            DBG_PRINTF("espconn_connect fail : %d\n", err);
+            DBG_PRINTF("espconn_secure_connect fail : %d\n", err);
         }
         //この後、TCP接続完了により、tcp_connectedcb()が呼ばれる
         break;
 
     case REQ_MAIN_PROC:
         DBG_PRINTF("REQ_MAIN_PROC\n");
-        main_proc(&mConn);
-        system_os_post(TASK_PRIOR_MAIN, REQ_MAIN_LOOP, 0);
+        err = main_proc(&mConn);
+        if (err == ESPCONN_OK) {
+            system_os_post(TASK_PRIOR_MAIN, REQ_MAIN_LOOP, 0);
+        }
         break;
 
     case REQ_MAIN_LOOP:
         system_soft_wdt_feed();
-        os_delay_us(1000);
         main_loop(&mConn);
         break;
 

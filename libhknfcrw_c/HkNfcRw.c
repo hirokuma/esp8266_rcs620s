@@ -61,6 +61,7 @@ bool HkNfcRw_Open(void)
 {
 	bool ret = NfcPcd_PortOpen();
 	if(!ret) {
+        LOGE("[open]fail PortOpen\n");
 		return false;
 	}
 
@@ -68,6 +69,7 @@ bool HkNfcRw_Open(void)
 	if(ret) {
 		HkNfcRw_SetLastError(HKNFCERR_NONE);
 	} else {
+        LOGE("[open]fail Init\n");
 		HkNfcRw_Close();
 	}
 	
@@ -159,9 +161,6 @@ HkNfcType HkNfcRw_Detect(bool bNfcA, bool bNfcB, bool bNfcF)
 			m_Type = HKNFCTYPE_B;
 		}
 	}
-    else {
-    	LOGD("Detect fail\n");
-    }
 
 	return m_Type;
 }
